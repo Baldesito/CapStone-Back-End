@@ -44,7 +44,7 @@ public class FavoritoController {
     @PostMapping("/aggiungi")
     public ResponseEntity<FavoritoResponse> aggiungiPreferito(@RequestBody FavoritoRequest preferitoRequest) {
         Utente utente = utenteService.getUtenteById(preferitoRequest.getUtenteId());
-        Volo volo = voloService.findVoloEntityById(preferitoRequest.getVoloId());
+        Volo volo = voloService.findById(preferitoRequest.getVoloId());
 
         if (utente == null || volo == null) {
             throw new RuntimeException("Utente o Volo non trovato");

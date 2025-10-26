@@ -30,7 +30,11 @@ public class PagamentoService {
         }
 
         // Mascheriamo il numero della carta per la sicurezza
-        String numeroCartaMascherato = "**** **** **** " + request.getNumeroCarta().substring(12);
+        // La validazione del formato è già gestita dalla @Pattern in PagamentoRequest
+        String ultimeCifre = request.getNumeroCarta().length() >= 4
+            ? request.getNumeroCarta().substring(request.getNumeroCarta().length() - 4)
+            : request.getNumeroCarta();
+        String numeroCartaMascherato = "**** **** **** " + ultimeCifre;
 
         Pagamento pagamento = new Pagamento();
         pagamento.setNumeroCarta(numeroCartaMascherato);

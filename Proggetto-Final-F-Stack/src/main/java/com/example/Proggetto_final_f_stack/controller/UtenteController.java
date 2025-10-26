@@ -32,11 +32,10 @@ public class UtenteController {
             return ResponseEntity.badRequest().body(null);
         }
 
-        String encodedPassword = passwordEncoder.encode(utenteRequest.getPassword());
-
+        // La password viene hashata nel service layer
         Utente utente = new Utente(
             utenteRequest.getUsername(),
-            encodedPassword,
+            utenteRequest.getPassword(),
             utenteRequest.getEmail(),
             List.of("ROLE_USER")
         );
@@ -45,17 +44,17 @@ public class UtenteController {
         return ResponseEntity.created(null).body(response);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/creaAdmin")
 public ResponseEntity<UtenteResponse> creaUtenteAdmin(@Valid @RequestBody UtenteRequest utenteRequest) {
     if (utenteService.getUtenteByUsername(utenteRequest.getUsername()) != null) {
         return ResponseEntity.badRequest().body(null);
     }
 
-    String encodedPassword = passwordEncoder.encode(utenteRequest.getPassword());
-
+    // La password viene hashata nel service layer
     Utente utente = new Utente(
         utenteRequest.getUsername(),
-        encodedPassword,
+        utenteRequest.getPassword(),
         utenteRequest.getEmail(),
         List.of("ROLE_ADMIN") // Assegna automaticamente il ruolo ADMIN
     );
@@ -85,8 +84,8 @@ public ResponseEntity<UtenteResponse> creaUtenteAdmin(@Valid @RequestBody Utente
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<UtenteResponse> updateUser(@PathVariable Long id, @RequestBody UtenteRequest utenteRequest) {
-        String encodedPassword = passwordEncoder.encode(utenteRequest.getPassword());
-        Utente utente = new Utente(utenteRequest.getUsername(), encodedPassword, utenteRequest.getEmail());
+        // La password viene hashata nel service layer
+        Utente utente = new Utente(utenteRequest.getUsername(), utenteRequest.getPassword(), utenteRequest.getEmail());
         Utente updatedUtente = utenteService.updateUtente(id, utente);
         if (updatedUtente != null) {
             UtenteResponse response = new UtenteResponse(updatedUtente.getId(), updatedUtente.getUsername(), updatedUtente.getEmail(), updatedUtente.getRoles());

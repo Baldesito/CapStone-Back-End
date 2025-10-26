@@ -41,6 +41,10 @@ public class UtenteService {
     }
 
     public Utente register(Utente utente) {
+        // Hash della password prima del salvataggio
+        if (utente.getPassword() != null && !utente.getPassword().startsWith("$2a$")) {
+            utente.setPassword(passwordEncoder.encode(utente.getPassword()));
+        }
         return utenteRepository.save(utente);
     }
 
@@ -48,7 +52,16 @@ public class UtenteService {
     public Utente updateUtente(Long id, Utente utente) {
         Utente utenteEsistente = getUtenteById(id);
         utenteEsistente.setUsername(utente.getUsername());
-        utenteEsistente.setPassword(utente.getPassword());
+
+        // Hash della password solo se è stata modificata e non è già hashata
+        if (utente.getPassword() != null && !utente.getPassword().isEmpty()) {
+            if (!utente.getPassword().startsWith("$2a$")) {
+                utenteEsistente.setPassword(passwordEncoder.encode(utente.getPassword()));
+            } else {
+                utenteEsistente.setPassword(utente.getPassword());
+            }
+        }
+
         utenteEsistente.setEmail(utente.getEmail());
         utenteEsistente.setRoles(utente.getRoles());
         return utenteRepository.save(utenteEsistente);

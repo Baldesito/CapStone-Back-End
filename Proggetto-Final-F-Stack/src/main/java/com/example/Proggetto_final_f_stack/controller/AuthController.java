@@ -17,11 +17,7 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> loginUtente(@Valid @RequestBody LoginRequest loginRequest) {
-        try {
-            LoginResponse response = utenteService.loginUtente(loginRequest);
-            return ResponseEntity.ok(response);
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(401).body(new LoginResponse());
-        }
+        LoginResponse response = utenteService.loginUtente(loginRequest);
+        return ResponseEntity.ok(response);
     }
 }

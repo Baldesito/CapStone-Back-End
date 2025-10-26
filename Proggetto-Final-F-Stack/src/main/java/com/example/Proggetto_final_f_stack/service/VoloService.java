@@ -8,6 +8,8 @@ import com.example.Proggetto_final_f_stack.payloadDTO.response.VoloResponse;
 import com.example.Proggetto_final_f_stack.repository.UtenteRepository;
 import com.example.Proggetto_final_f_stack.repository.VoloRepository;
 import org.hibernate.Hibernate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -19,6 +21,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class VoloService {
+
+    private static final Logger logger = LoggerFactory.getLogger(VoloService.class);
 
     @Autowired
     private VoloRepository voloRepository;
@@ -54,9 +58,9 @@ public VoloResponse aggiornaVolo(Long id, VoloRequest voloRequest) {
     Volo volo = voloRepository.findByIdWithDetails(id)
             .orElseThrow(() -> new RuntimeException("Volo non trovato con ID: " + id));
 
-    System.out.println("Volo trovato: " + volo);
-    System.out.println("Prenotazioni: " + volo.getPrenotazioni());
-    System.out.println("Preferiti: " + volo.getPreferiti());
+    logger.debug("Volo trovato con ID: {}", id);
+    logger.debug("Numero prenotazioni: {}", volo.getPrenotazioni().size());
+    logger.debug("Numero preferiti: {}", volo.getPreferiti().size());
 
     // Verifica se il volo ha prenotazioni
     if (!volo.getPrenotazioni().isEmpty()) {
@@ -70,14 +74,14 @@ public VoloResponse aggiornaVolo(Long id, VoloRequest voloRequest) {
             username = principal.toString();
         }
 
-        System.out.println("Utente corrente: " + username);
+        logger.debug("Tentativo di aggiornamento volo {} da parte dell'utente: {}", id, username);
 
         // Verifica se l'utente corrente è un admin
         if (!isUserAdmin(username)) {
-            System.out.println("Utente non autorizzato: non è un admin");
+            logger.warn("Utente {} non autorizzato ad aggiornare volo {} con prenotazioni attive", username, id);
             throw new RuntimeException("Non puoi aggiornare un volo già prenotato a meno che non sei un admin");
         } else {
-            System.out.println("Utente autorizzato: è un admin");
+            logger.info("Admin {} autorizzato ad aggiornare volo {} con prenotazioni attive", username, id);
         }
     }
 
@@ -119,7 +123,6 @@ public VoloResponse aggiornaVolo(Long id, VoloRequest voloRequest) {
     }
 
      public List<VoloResponse> getAllVoli() {
-        List<Volo> voli = voloRepository.findAll();
         return voloRepository.findAll().stream()
                 .map(volo -> new VoloResponse(
                         volo.getId(),
@@ -149,14 +152,8 @@ public VoloResponse aggiornaVolo(Long id, VoloRequest voloRequest) {
     }
 
     @Transactional
-    public Volo findVoloEntityById(Long id) {
-        return voloRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Volo con ID " + id + " non trovato"));
-    }
-
-    @Transactional
     public Volo findById(Long id) {
         return voloRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Volo non trovato con ID: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Volo con ID " + id + " non trovato"));
     }
 }

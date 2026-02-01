@@ -14,12 +14,7 @@ public interface PrenotazioneRepository extends JpaRepository<Prenotazione, Long
 
     List<Prenotazione> findByUtenteId(Long utenteId);
 
-@Query("SELECT p FROM Prenotazione p WHERE p.id = :id")
-Optional<Prenotazione> findById(@Param("id") Long id);
-
-
-
-
-
-
+    // Questo metodo usa FETCH per caricare utente e volo in una sola chiamata
+    @Query("SELECT p FROM Prenotazione p LEFT JOIN FETCH p.utente LEFT JOIN FETCH p.volo WHERE p.id = :id")
+    Optional<Prenotazione> findByIdWithDetails(@Param("id") Long id);
 }

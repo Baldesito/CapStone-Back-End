@@ -10,13 +10,10 @@ import com.example.Proggetto_final_f_stack.repository.PrenotazioneRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -34,77 +31,47 @@ public class PrenotazioneService {
     private VoloService voloService;
 
     @Transactional
-    public PrenotazioneResponse creaPrenotazione(PrenotazioneRequest prenotazioneRequest) {
-        Utente utente = utenteService.getUtenteById(prenotazioneRequest.getUtenteId());
-        Volo volo = voloService.findById(prenotazioneRequest.getVoloId());
+    public PrenotazioneResponse creaPrenotazione(PrenotazioneRequest request) {
+        Utente utente = utenteService.getUtenteById(request.getUtenteId());
+        Volo volo = voloService.findById(request.getVoloId());
 
         if (utente == null || volo == null) {
             throw new RuntimeException("Utente o Volo non trovato");
         }
 
-        Prenotazione prenotazione = new Prenotazione(prenotazioneRequest.getDataPrenotazione(), utente, volo);
-        Prenotazione savedPrenotazione = prenotazioneRepository.save(prenotazione);
-        return new PrenotazioneResponse(
-            savedPrenotazione.getId(),
-            savedPrenotazione.getDataPrenotazione(),
-            savedPrenotazione.getUtente().getId(),
-            savedPrenotazione.getVolo().getId()
-        );
+        Prenotazione prenotazione = new Prenotazione(request.getDataPrenotazione().atStartOfDay(), utente, volo);
+        Prenotazione saved = prenotazioneRepository.save(prenotazione);
+
+        return new PrenotazioneResponse(saved); // Usa il costruttore intelligente!
     }
 
-@Transactional
-public PrenotazioneResponse aggiornaPrenotazione(Long id, PrenotazioneRequest prenotazioneRequest) {
-    logger.debug("Tentativo di aggiornamento della prenotazione con ID: {}", id);
-
-    Prenotazione existingPrenotazione = prenotazioneRepository.findById(id)
-        .orElseThrow(() -> {
-            logger.error("Prenotazione con ID {} non trovata", id);
-            return new ResourceNotFoundException("Prenotazione non trovata con ID: " + id);
-        });
-
-    logger.debug("Prenotazione trovata con ID: {}", id);
-
-    Utente utente = utenteService.getUtenteById(prenotazioneRequest.getUtenteId());
-    Volo volo = voloService.findById(prenotazioneRequest.getVoloId());
-
-    existingPrenotazione.setDataPrenotazione(prenotazioneRequest.getDataPrenotazione());
-    existingPrenotazione.setUtente(utente);
-    existingPrenotazione.setVolo(volo);
-
-    Prenotazione updatedPrenotazione = prenotazioneRepository.save(existingPrenotazione);
-    logger.info("Prenotazione con ID {} aggiornata con successo", id);
-
-    return new PrenotazioneResponse(
-        updatedPrenotazione.getId(),
-        updatedPrenotazione.getDataPrenotazione(),
-        updatedPrenotazione.getUtente().getId(),
-        updatedPrenotazione.getVolo().getId()
-    );
-}
-
-
-
     @Transactional
+    public PrenotazioneResponse aggiornaPrenotazione(Long id, PrenotazioneRequest request) {
+        Prenotazione existing = prenotazioneRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Prenotazione non trovata con ID: " + id));
+
+        Utente utente = utenteService.getUtenteById(request.getUtenteId());
+        Volo volo = voloService.findById(request.getVoloId());
+
+        existing.setDataPrenotazione(request.getDataPrenotazione().atStartOfDay());
+        existing.setUtente(utente);
+        existing.setVolo(volo);
+
+        Prenotazione updated = prenotazioneRepository.save(existing);
+        return new PrenotazioneResponse(updated);
+    }
+
+    @Transactional(readOnly = true)
     public List<PrenotazioneResponse> getAllPrenotazioni() {
         return prenotazioneRepository.findAll().stream()
-                .map(prenotazione -> new PrenotazioneResponse(
-                    prenotazione.getId(),
-                    prenotazione.getDataPrenotazione(),
-                    prenotazione.getUtente().getId(),
-                    prenotazione.getVolo().getId()
-                ))
+                .map(PrenotazioneResponse::new) // Mappa tutto il volo!
                 .collect(Collectors.toList());
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public List<PrenotazioneResponse> getPrenotazioniByUtente(Long utenteId) {
         return prenotazioneRepository.findByUtenteId(utenteId).stream()
-                .map(prenotazione -> new PrenotazioneResponse(
-                    prenotazione.getId(),
-                    prenotazione.getDataPrenotazione(),
-                    prenotazione.getUtente().getId(),
-                    prenotazione.getVolo().getId()
-                ))
+                .map(PrenotazioneResponse::new) // Mappa tutto il volo!
                 .collect(Collectors.toList());
     }
 
@@ -117,41 +84,10 @@ public PrenotazioneResponse aggiornaPrenotazione(Long id, PrenotazioneRequest pr
         }
     }
 
-    @Transactional
-public PrenotazioneResponse getPrenotazioneByIdResponse(Long id) {
-    logger.debug("Ricerca prenotazione nel database con ID: {}", id);
-
-    Prenotazione prenotazione = prenotazioneRepository.findById(id)
-        .orElseThrow(() -> {
-            logger.error("Nessuna prenotazione trovata con ID: {}", id);
-            return new ResourceNotFoundException("Nessuna prenotazione trovata con ID: " + id);
-        });
-
-    logger.debug("Prenotazione trovata con ID: {}", id);
-
-    return new PrenotazioneResponse(
-        prenotazione.getId(),
-        prenotazione.getDataPrenotazione(),
-        prenotazione.getUtente().getId(),
-        prenotazione.getVolo().getId()
-    );
-}
-
-
-@Transactional
-public void printAllPrenotazioni() {
-    List<Prenotazione> prenotazioni = prenotazioneRepository.findAll();
-
-    if (prenotazioni.isEmpty()) {
-        logger.info("Nessuna prenotazione trovata nel database");
-    } else {
-        logger.info("Trovate {} prenotazioni nel database", prenotazioni.size());
-        prenotazioni.forEach(p ->
-            logger.debug("Prenotazione ID={}, UtenteID={}, VoloID={}",
-                p.getId(), p.getUtente().getId(), p.getVolo().getId())
-        );
+    @Transactional(readOnly = true)
+    public PrenotazioneResponse getPrenotazioneByIdResponse(Long id) {
+        Prenotazione prenotazione = prenotazioneRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Nessuna prenotazione trovata con ID: " + id));
+        return new PrenotazioneResponse(prenotazione);
     }
-}
-
-
 }

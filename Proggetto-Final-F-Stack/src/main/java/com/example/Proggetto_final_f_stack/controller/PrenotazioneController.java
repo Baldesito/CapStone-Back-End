@@ -1,14 +1,11 @@
 package com.example.Proggetto_final_f_stack.controller;
 
-import com.example.Proggetto_final_f_stack.model.Prenotazione;
 import com.example.Proggetto_final_f_stack.model.Utente;
-import com.example.Proggetto_final_f_stack.model.Volo;
 import com.example.Proggetto_final_f_stack.payloadDTO.request.PrenotazioneRequest;
 import com.example.Proggetto_final_f_stack.payloadDTO.response.PrenotazioneResponse;
-import com.example.Proggetto_final_f_stack.repository.PrenotazioneRepository;
-import com.example.Proggetto_final_f_stack.repository.UtenteRepository;
-import com.example.Proggetto_final_f_stack.repository.VoloRepository;
+import com.example.Proggetto_final_f_stack.service.EmailService;
 import com.example.Proggetto_final_f_stack.service.PrenotazioneService;
+import com.example.Proggetto_final_f_stack.service.UtenteService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -26,113 +23,67 @@ public class PrenotazioneController {
     private PrenotazioneService prenotazioneService;
 
     @Autowired
-    PrenotazioneRepository prenotazioneRepository;
+    private EmailService emailService;
 
     @Autowired
-    UtenteRepository utenteRepository;
+    private UtenteService utenteService; // Aggiunto per recuperare l'email facilmente
 
-    @Autowired
-    VoloRepository voloRepository;
-
-    // POST --> http://localhost:8080/prenotazioni
+    // POST --> http://localhost:8080/api/prenotazioni/crea
     @PostMapping("/crea")
-public ResponseEntity<PrenotazioneResponse> creaPrenotazione(
-        @Valid @RequestBody PrenotazioneRequest prenotazioneRequest) {
+    public ResponseEntity<PrenotazioneResponse> creaPrenotazione(@Valid @RequestBody PrenotazioneRequest request) {
 
-    // Controlla se l'utente esiste
-    Utente utente = utenteRepository.findById(prenotazioneRequest.getUtenteId())
-            .orElseThrow(() -> new RuntimeException("Utente non trovato con ID: " + prenotazioneRequest.getUtenteId()));
+        // 1. Deleghiamo al Service la creazione (il Service mapperà in automatico i dati del volo!)
+        PrenotazioneResponse response = prenotazioneService.creaPrenotazione(request);
 
-    // Controlla se il volo esiste
-    Volo volo = voloRepository.findById(prenotazioneRequest.getVoloId())
-            .orElseThrow(() -> new RuntimeException("Volo non trovato con ID: " + prenotazioneRequest.getVoloId()));
+        // 2. Recuperiamo l'utente dal database per avere il suo indirizzo email reale
+        Utente utente = utenteService.getUtenteById(request.getUtenteId());
 
-    // Crea la nuova prenotazione
-    Prenotazione nuovaPrenotazione = new Prenotazione(prenotazioneRequest.getDataPrenotazione(), utente, volo);
-    prenotazioneRepository.save(nuovaPrenotazione);
+        // 3. Inviamo l'email di conferma se l'utente ha una mail valida
+        if (utente != null && utente.getEmail() != null) {
+            String nomeDestinatario = utente.getUsername() != null ? utente.getUsername() : "Passeggero";
 
-    return ResponseEntity.status(HttpStatus.CREATED).body(new PrenotazioneResponse());
-}
+            // Possiamo prendere origine e destinazione direttamente dalla response!
+            String tratta = response.getOrigine() + " -> " + response.getDestinazione();
 
+            // Invio effettivo della mail
+            emailService.inviaEmailConferma(utente.getEmail(), nomeDestinatario, tratta);
+        }
 
-    // PUT --> http://localhost:8080/prenotazioni/{id}
+        // 4. Restituiamo la risposta COMPLETA al frontend (così le card non sono vuote)
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    // PUT --> http://localhost:8080/api/prenotazioni/{id}
     @PutMapping("/{id}")
-public ResponseEntity<PrenotazioneResponse> aggiornaPrenotazione(
-        @PathVariable Long id,
-        @Valid @RequestBody PrenotazioneRequest prenotazioneRequest) {
-
-    // Trova la prenotazione esistente
-    Prenotazione prenotazione = prenotazioneRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Prenotazione non trovata con ID: " + id));
-
-    // Controlla se l'utente esiste
-    Utente utente = utenteRepository.findById(prenotazioneRequest.getUtenteId())
-            .orElseThrow(() -> new RuntimeException("Utente non trovato con ID: " + prenotazioneRequest.getUtenteId()));
-
-    // Controlla se il volo esiste
-    Volo volo = voloRepository.findById(prenotazioneRequest.getVoloId())
-            .orElseThrow(() -> new RuntimeException("Volo non trovato con ID: " + prenotazioneRequest.getVoloId()));
-
-    // Aggiorna i dati della prenotazione
-    prenotazione.setDataPrenotazione(prenotazioneRequest.getDataPrenotazione());
-    prenotazione.setUtente(utente);
-    prenotazione.setVolo(volo);
-
-    // Salva la prenotazione aggiornata nel database
-    prenotazioneRepository.save(prenotazione);
-
-    // Costruisci il DTO di risposta
-    PrenotazioneResponse response = new PrenotazioneResponse(
-            prenotazione.getId(),
-            prenotazione.getDataPrenotazione(),
-            prenotazione.getUtente().getId(),
-            prenotazione.getVolo().getId()
-    );
-
-    // Restituisci la risposta corretta
-    return ResponseEntity.ok(response);
-}
-
-    // GET --> http://localhost:8080/prenotazioni
-    @GetMapping
-    public ResponseEntity<List<PrenotazioneResponse>> getAllPrenotazioni() {
-        List<PrenotazioneResponse> response = prenotazioneService.getAllPrenotazioni();
+    public ResponseEntity<PrenotazioneResponse> aggiornaPrenotazione(@PathVariable Long id, @Valid @RequestBody PrenotazioneRequest request) {
+        PrenotazioneResponse response = prenotazioneService.aggiornaPrenotazione(id, request);
         return ResponseEntity.ok(response);
     }
 
-    // GET --> http://localhost:8080/prenotazioni/{id}
-@GetMapping("/{id}")
-public ResponseEntity<Prenotazione> getPrenotazioneById(@PathVariable Long id) {
-    return prenotazioneRepository.findById(id)
-            .map(ResponseEntity::ok)
-            .orElseGet(() -> {
+    // GET --> http://localhost:8080/api/prenotazioni
+    @GetMapping
+    public ResponseEntity<List<PrenotazioneResponse>> getAllPrenotazioni() {
+        return ResponseEntity.ok(prenotazioneService.getAllPrenotazioni());
+    }
 
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-            });
-}
+    // GET --> http://localhost:8080/api/prenotazioni/{id}
+    @GetMapping("/{id}")
+    public ResponseEntity<PrenotazioneResponse> getPrenotazioneById(@PathVariable Long id) {
+        return ResponseEntity.ok(prenotazioneService.getPrenotazioneByIdResponse(id));
+    }
 
-
-
-
-    // GET --> http://localhost:8080/prenotazioni/utente/{utenteId}
+    // GET --> http://localhost:8080/api/prenotazioni/utente/{utenteId}
     @GetMapping("/utente/{utenteId}")
     public ResponseEntity<List<PrenotazioneResponse>> getPrenotazioniByUtente(@PathVariable Long utenteId) {
         List<PrenotazioneResponse> response = prenotazioneService.getPrenotazioniByUtente(utenteId);
         return ResponseEntity.ok(response);
     }
-    // DELETE --> http://localhost:8080/prenotazioni/{Id}
+
+    // DELETE --> http://localhost:8080/api/prenotazioni/{id}
     @DeleteMapping("/{id}")
-@PreAuthorize("hasRole('ADMIN')")
-public ResponseEntity<Void> deletePrenotazione(@PathVariable Long id) {
-
-    if (!prenotazioneRepository.existsById(id)) {
-
-        return ResponseEntity.notFound().build();
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deletePrenotazione(@PathVariable Long id) {
+        prenotazioneService.deletePrenotazione(id);
+        return ResponseEntity.noContent().build();
     }
-
-    prenotazioneService.deletePrenotazione(id);
-
-    return ResponseEntity.noContent().build();
-}
-
 }

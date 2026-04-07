@@ -1,7 +1,5 @@
 package com.example.Proggetto_final_f_stack.payloadDTO.response;
 
-import com.example.Proggetto_final_f_stack.model.Utente;
-import com.example.Proggetto_final_f_stack.model.Volo;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

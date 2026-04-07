@@ -31,17 +31,16 @@ public class VoloController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PostMapping
-public ResponseEntity<VoloResponse> salvaVoloDaUtente(@RequestBody VoloRequest voloRequest) {
-    VoloResponse response = voloService.creaVolo(voloRequest);
-    return ResponseEntity.status(HttpStatus.CREATED).body(response);
-}
+    @PostMapping("/salva") //salva volo
+    public ResponseEntity<VoloResponse> salvaVoloDaUtente(@RequestBody VoloRequest voloRequest) {
+        VoloResponse response = voloService.creaVolo(voloRequest);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
 
 
     @GetMapping("/utente/{utenteId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<PrenotazioneResponse>> getPrenotazioniUtente(@PathVariable Long utenteId) {
-    System.out.println("Admin sta richiedendo le prenotazioni dell'utente con ID: " + utenteId);
 
     List<PrenotazioneResponse> prenotazioni = prenotazioneService.getPrenotazioniByUtente(utenteId);
 

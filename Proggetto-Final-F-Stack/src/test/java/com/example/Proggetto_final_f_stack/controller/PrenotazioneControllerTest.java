@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.context.jdbc.Sql;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import static io.restassured.RestAssured.given;
@@ -37,7 +38,7 @@ public class PrenotazioneControllerTest {
         "INSERT INTO voli (id, compagnia, origine, destinazione, data_partenza, data_arrivo, prezzo) SELECT 1, 'CompagniaTest', 'Origine', 'Destinazione', '2025-03-04 10:00:00', '2025-03-04 12:00:00', 100.00 WHERE NOT EXISTS (SELECT 1 FROM voli WHERE id = 1)"
     })
     public void testCreazionePrenotazione() {
-        PrenotazioneRequest prenotazioneRequest = new PrenotazioneRequest(LocalDateTime.now(), 1L, 1L);
+        PrenotazioneRequest prenotazioneRequest = new PrenotazioneRequest(LocalDate.now(), 1L, 1L);
 
         given()
             .auth().basic("testuser", "password")

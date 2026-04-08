@@ -26,7 +26,7 @@ public class PrenotazioneController {
     private EmailService emailService;
 
     @Autowired
-    private UtenteService utenteService; // Aggiunto per recuperare l'email facilmente
+    private UtenteService utenteService;
 
     // POST --> http://localhost:8080/api/prenotazioni/crea
     @PostMapping("/crea")
@@ -46,7 +46,7 @@ public class PrenotazioneController {
             String tratta = response.getOrigine() + " -> " + response.getDestinazione();
 
             // Invio effettivo della mail
-            emailService.inviaEmailConferma(utente.getEmail(), nomeDestinatario, tratta);
+            // emailService.inviaEmailConferma(utente.getEmail(), nomeDestinatario, tratta);
         }
 
         // 4. Restituiamo la risposta COMPLETA al frontend (così le card non sono vuote)

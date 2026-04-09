@@ -76,18 +76,18 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // ✅ CORRETTA configurazione dei CORS come `CorsConfigurationSource`
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.addAllowedOrigin("http://localhost:5173"); // ✅ Permetti chiamate dal frontend React
+        configuration.addAllowedOrigin("http://localhost:5173"); // ✅ Permetti chiamate dal frontend locale
+        configuration.addAllowedOrigin("https://front-end-cap-stone-main.vercel.app"); // ✅ Permetti chiamate dal frontend online (Vercel)
         configuration.addAllowedMethod("*");
         configuration.addAllowedHeader("*");
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
-        return source; // ✅ Ora è un `CorsConfigurationSource`, non un `CorsFilter`
+        return source;
     }
 
     @Bean
